@@ -1,18 +1,18 @@
+from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
+
 USER = 'user'
-ADMIN = 'admin'
-MODERATOR = 'moderator'
 
 ROLES = (
     (USER, 'Пользователь'),
-    (ADMIN, 'Администратор'),
-    (MODERATOR, 'Модератор'),
+    ('admin', 'Администратор'),
+    ('moderator', 'Модератор'),
 )
 
 
-class User(AbstractUser):
+class CustomUser(AbstractUser):
 
     username = models.CharField(
         'Логин',
@@ -52,3 +52,6 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.username
+
+
+User = get_user_model()
