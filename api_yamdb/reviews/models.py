@@ -3,13 +3,13 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from users.models import User  # Импорт кастомной модели пользователя
 
 
-class Reviews(models.Model):
+class Review(models.Model):
     """Модель для хранения отзывов на произведения."""
 
     text = models.TextField('Текст отзыва')  # Основной текст отзыва
 
     titles = models.ForeignKey(
-        Titles,  # Ссылка на произведение
+        Title,  # Ссылка на произведение
         # При удалении произведения — удаляются и отзывы
         on_delete=models.CASCADE,
         verbose_name='Произведение'  # Название поля в админке
@@ -34,6 +34,13 @@ class Reviews(models.Model):
     )
 
     class Meta:
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=['title', 'author'],
+                name='unique_review'
+            ),
+        ]
         verbose_name = 'Отзыв'  # Название модели в единственном числе
         # Название модели во множественном числе
         verbose_name_plural = 'Отзывы'
@@ -64,7 +71,7 @@ class Comment(models.Model):
     )
 
     review = models.ForeignKey(
-        Reviews,  # Ссылка на отзыв
+        Review,  # Ссылка на отзыв
         # При удалении отзыва удаляются все связанные комментарии
         on_delete=models.CASCADE,
         related_name='comments',  # Обратное имя: review.comments.all()
