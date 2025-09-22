@@ -1,9 +1,9 @@
 from django.urls import include, path
 
-from api.views import TokenView
+from api.views import SignUpView, TokenView
 
 auth_urls = [
-    # path('signup/', signup, name='signup'),
+    path('signup/', SignUpView.as_view(), name='signup'),
     path('token/', TokenView.as_view(), name='token'),
 ]
 
