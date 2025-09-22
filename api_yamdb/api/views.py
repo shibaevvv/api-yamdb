@@ -2,14 +2,14 @@ import random
 
 from django.db import IntegrityError
 from django.core.mail import send_mail
-from rest_framework import permissions, status
+from rest_framework import permissions, status, viewsets
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import AccessToken
 
-from api.serializers import TokenSerializer, SignUpSerializer
+from api.serializers import TokenSerializer, SignUpSerializer, UserSerializer
 from users.models import User
 
 
@@ -71,3 +71,9 @@ class TokenView(APIView):
             {'error': 'Отсутствует обязательное поле или оно некорректно'},
             status=status.HTTP_400_BAD_REQUEST
         )
+
+
+class UserViewSet(viewsets.ModelViewSet):
+    """Вьюсет для работы с пользователами."""
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
