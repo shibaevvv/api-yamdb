@@ -1,20 +1,25 @@
 import random
 
-from django.db import IntegrityError
 from django.core.mail import send_mail
-from rest_framework import permissions, status, viewsets
+from rest_framework import filters, permissions, status, viewsets
+from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import AccessToken
 
-from api.serializers import TokenSerializer, SignUpSerializer, UserSerializer
+from api.permissions import IsAdminOnlyPermission
+from api.serializers import (
+    TokenSerializer, SignUpSerializer, UserSerializer, SelfEditUserSerializer
+)
 from users.models import User
 
 
 class SignUpView(APIView):
     """Регистрация нового пользователя и/или отправка проверочного кода."""
+
     permission_classes = (permissions.AllowAny,)
 
     def post(self, request):
@@ -50,7 +55,8 @@ class SignUpView(APIView):
 
 
 class TokenView(APIView):
-    """Возвращает JWT-токен зарегистрированного пользователя."""
+    """Получение JWT-токена зарегистрированного пользователя."""
+
     permission_classes = (permissions.AllowAny,)
 
     def post(self, request):
@@ -74,6 +80,31 @@ class TokenView(APIView):
 
 
 class UserViewSet(viewsets.ModelViewSet):
-    """Вьюсет для работы с пользователами."""
+    """Вьюсет для работы с пользователями."""
+
     queryset = User.objects.all()
     serializer_class = UserSerializer
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('username',)
+    lookup_field = 'username'
+    permission_classes = (IsAdminOnlyPermission,)
+    http_method_names = ('get', 'post', 'patch', 'delete')
+
+    @action(
+        detail=False,
+        methods=['get', 'patch'],
+        permission_classes=(IsAuthenticated,),
+        url_path='me'
+    )
+    def get_self_user_page(self, request):
+        """Метод для работы с запросами к своей учетной записи."""
+        user = request.user
+        if request.method == 'PATCH':
+            serializer = SelfEditUserSerializer(
+                user,
+                data=request.data,
+                partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(UserSerializer(user).data, status=status.HTTP_200_OK)

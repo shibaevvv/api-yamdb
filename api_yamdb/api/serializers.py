@@ -23,6 +23,8 @@ class SignUpSerializer(serializers.Serializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
+    """Сериализатор для модели пользователя."""
+
     class Meta:
         model = User
         fields = (
@@ -30,3 +32,10 @@ class UserSerializer(serializers.ModelSerializer):
 
     def validate_username(self, username):
         return username_validator(username)
+
+
+class SelfEditUserSerializer(UserSerializer):
+    """Сериализатор для работы со своей учетной записью."""
+
+    class Meta(UserSerializer.Meta):
+        read_only_fields = ('role',)

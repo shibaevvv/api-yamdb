@@ -1,15 +1,14 @@
 import re
 
-from rest_framework import serializers
+from rest_framework.serializers import ValidationError
 
 
 def username_validator(username):
+    """Валидатор для проверок поля username."""
     if username == 'me':
-        raise serializers.ValidationError(
-            'Недопустимое имя пользователя!'
-        )
+        raise ValidationError('Недопустимое имя пользователя!')
     if not re.match(r'^[\w.@+-]+\Z', username):
-        raise serializers.ValidationError(
+        raise ValidationError(
             ('Имя пользователя может содержать латиницу, '
                 'цифры и знаки @ / . / + / - / _')
         )
