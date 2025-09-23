@@ -74,7 +74,7 @@ class TokenView(APIView):
                 status=status.HTTP_200_OK,
             )
         return Response(
-            {'error': 'Отсутствует обязательное поле или оно некорректно'},
+            {'error': 'Отсутствует обязательное поле или оно некорректно!'},
             status=status.HTTP_400_BAD_REQUEST
         )
 
