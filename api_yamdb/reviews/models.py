@@ -92,7 +92,7 @@ class Review(models.Model):
         related_name="reviews"
     )
 
-    estimation = models.PositiveSmallIntegerField(
+    score = models.PositiveSmallIntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(10)],
         verbose_name='Оценка'
     )

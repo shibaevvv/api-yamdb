@@ -18,30 +18,18 @@ class IsAuthorOrModeratorOrAdmin(BasePermission):
     модератор (is_staff) или администратор (is_superuser).
     """
 
+    def has_permission(self, request, view):
+        return request.method in SAFE_METHODS or (request.user and request.user.is_authenticated)
+
     def has_object_permission(self, request, view, obj):
-        # чтение доступно всем
         if request.method in SAFE_METHODS:
             return True
-
         user = request.user
-        # требуем аутентификацию для небезопасных методов
         if not user or not user.is_authenticated:
             return False
-
-        # автору (ForeignKey) — доступ
-        try:
-            author = obj.author
-        except AttributeError:
-            return False
-
-        if author == user:
+        if obj.author == user or user.is_staff or user.is_superuser:
             return True
-
-        # модератор или суперюзер
-        if user.is_staff or user.is_superuser:
-            return True
-
-        return False
+        return getattr(user, 'role', None) in ('moderator', 'admin')
 
 
 class IsAdminOnlyPermission(BasePermission):

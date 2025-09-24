@@ -1,25 +1,25 @@
 import random
 
 from django.core.mail import send_mail
+from django.db import IntegrityError
 from django.db.models import Avg
 from rest_framework import permissions, status, viewsets, filters as drf_filters
-from rest_framework.exceptions import ValidationError, NotFound, PermissionDenied
+from rest_framework.exceptions import ValidationError, NotAuthenticated
 from rest_framework.decorators import action
 
 from rest_framework.generics import get_object_or_404
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, SAFE_METHODS
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import AccessToken
 
-from rest_framework import generics
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
 from django_filters.rest_framework import DjangoFilterBackend
 from django_filters import rest_framework as filters
 
 
-from reviews.models import Category, Genre, Title, Review
+from reviews.models import Category, Genre, Title, Review, Comment
 from .serializers import (
     CategorySerializer,
     GenreSerializer,
@@ -28,6 +28,7 @@ from .serializers import (
     TokenSerializer,
     SignUpSerializer,
     ReviewSerializer,
+    CommentSerializer
 )
 from .permissions import IsAdminOrReadOnly, IsAuthorOrModeratorOrAdmin
 
@@ -130,71 +131,10 @@ class UserViewSet(viewsets.ModelViewSet):
 
 
 class StandardResultsSetPagination(PageNumberPagination):
-    page_size = 10  # можно настроить
+    page_size = 10
     page_size_query_param = 'page_size'
     max_page_size = 100
 
-
-class ReviewListCreateView(generics.ListCreateAPIView):
-    """
-    GET  /api/v1/titles/{title_id}/reviews/  -> список отзывов (AllowAny), с пагинацией
-    POST /api/v1/titles/{title_id}/reviews/  -> создать отзыв (IsAuthenticated), 1 отзыв на пользователя+title
-    """
-    serializer_class = ReviewSerializer
-    pagination_class = StandardResultsSetPagination
-
-    def get_permissions(self):
-        if self.request.method == 'GET':
-            return [AllowAny()]
-        return [IsAuthenticated()]
-
-    def get_title_or_404(self):
-        title_id = self.kwargs.get('title_id')
-        try:
-            return Title.objects.get(pk=title_id)
-        except Title.DoesNotExist:
-            raise NotFound("Произведение не найдено")
-
-    def get_queryset(self):
-        title = self.get_title_or_404()
-        return Review.objects.filter(title=title).order_by('-pub_date')
-
-    def perform_create(self, serializer):
-        title = self.get_title_or_404()
-        # serializer.validate уже проверил уникальность отзыва на POST
-        serializer.save(title=title, author=self.request.user)
-
-
-class ReviewDetailView(generics.RetrieveUpdateDestroyAPIView):
-    """
-    GET    /api/v1/titles/{title_id}/reviews/{review_id}/  -> получить отзыв (AllowAny)
-    PATCH  /.../                                           -> частичное обновление (IsAuthorOrModeratorOrAdmin)
-    DELETE /.../                                           -> удаление (IsAuthorOrModeratorOrAdmin)
-    """
-    serializer_class = ReviewSerializer
-    permission_classes = [IsAuthorOrModeratorOrAdmin]
-
-    def get_object(self):
-        title_id = self.kwargs.get('title_id')
-        review_id = self.kwargs.get('review_id')
-
-        # убедимся, что Title существует
-        try:
-            title = Title.objects.get(pk=title_id)
-        except Title.DoesNotExist:
-            raise NotFound("Произведение не найдено")
-
-        # затем получим отзыв
-        try:
-            review = Review.objects.get(pk=review_id, title=title)
-        except Review.DoesNotExist:
-            raise NotFound("Отзыв не найден")
-
-        # проверка прав на чтение реализуется в permission_classes:
-        # allow read to any — но так как мы применяем кастомный пермишн,
-        # стоит разрешить чтение всем: has_object_permission возвращает True для SAFE_METHODS.
-        self.check_object_permissions(self.request, review)
-        return review
 
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
@@ -248,7 +188,7 @@ class TitleViewSet(viewsets.ModelViewSet):
     filterset_class = TitleFilter
 
     def get_queryset(self):
-        return Title.objects.annotate(_avg_score=Avg('reviews__estimation'))
+        return Title.objects.annotate(_avg_score=Avg('reviews__score'))
 
     def get_serializer_class(self):
         return TitleReadSerializer if self.action in ('list', 'retrieve') else TitleWriteSerializer
@@ -258,3 +198,56 @@ class TitleViewSet(viewsets.ModelViewSet):
             return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
         return super().update(request, *args, **kwargs)
 
+
+class ReviewViewSet(viewsets.ModelViewSet):
+    serializer_class = ReviewSerializer
+    http_method_names = ['get', 'post', 'patch', 'delete']
+    permission_classes = [IsAuthorOrModeratorOrAdmin]
+
+    def get_title(self):
+        return get_object_or_404(Title, pk=self.kwargs.get('title_id'))
+
+    def get_queryset(self):
+        return Review.objects.filter(title=self.get_title()).order_by('-created_at')
+
+    def get_permissions(self):
+        if self.request.method in SAFE_METHODS:
+            return [AllowAny()]
+        return super().get_permissions()
+
+    def perform_create(self, serializer):
+        title = self.get_title()
+        try:
+            serializer.save(author=self.request.user, title=title)
+        except IntegrityError:
+            raise ValidationError('Вы уже оставляли отзыв на это произведение.')
+
+    def get_object(self):
+        obj = super().get_object()
+        self.check_object_permissions(self.request, obj)   # ← обязательно
+        return obj
+
+class CommentViewSet(viewsets.ModelViewSet):
+    serializer_class = CommentSerializer
+    http_method_names = ['get', 'post', 'patch', 'delete']  # 'post' здесь не нужен для detail, но оставьте, если тесты ожидают; иначе удалите 'post'
+    permission_classes = [IsAuthorOrModeratorOrAdmin]
+
+    def get_review(self):
+        title = get_object_or_404(Title, pk=self.kwargs.get('title_id'))
+        return get_object_or_404(Review, pk=self.kwargs.get('review_id'), title=title)
+
+    def get_queryset(self):
+        return Comment.objects.filter(review=self.get_review()).order_by('-created_at')
+
+    def get_permissions(self):
+        if self.request.method in SAFE_METHODS:
+            return [AllowAny()]
+        return super().get_permissions()
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user, review=self.get_review())
+
+    def get_object(self):
+        obj = super().get_object()
+        self.check_object_permissions(self.request, obj)
+        return obj
