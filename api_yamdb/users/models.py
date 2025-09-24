@@ -3,19 +3,16 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 
 
-ROLE_USER = 'user'
-ROLE_ADMIN = 'admin'
-ROLE_MODERATOR = 'moderator'
+USER = 'user'
 
 ROLES = (
-    (ROLE_USER, 'Пользователь'),
-    (ROLE_ADMIN, 'Администратор'),
-    (ROLE_MODERATOR, 'Модератор'),
+    (USER, 'Пользователь'),
+    ('admin', 'Администратор'),
+    ('moderator', 'Модератор'),
 )
 
 
 class CustomUser(AbstractUser):
-    """Модель пользователя."""
 
     username = models.CharField(
         'Логин',
@@ -38,7 +35,7 @@ class CustomUser(AbstractUser):
         'Роль',
         max_length=20,
         choices=ROLES,
-        default=ROLE_USER,
+        default=USER,
         blank=True
     )
     confirmation_code = models.CharField(
@@ -52,17 +49,6 @@ class CustomUser(AbstractUser):
         ordering = ('username',)
         verbose_name = 'пользователь'
         verbose_name_plural = 'Пользователи'
-
-    def is_admin(self):
-        """Метод для проверки, является ли пользователь администратором."""
-        return (self.role == ROLE_ADMIN or self.is_staff or self.is_superuser)
-
-    def is_moderator(self):
-        """Метод для проверки, является ли пользователь модератором."""
-        return (self.role == ROLE_MODERATOR
-                or self.is_staff
-                or self.is_superuser
-                )
 
     def __str__(self):
         return self.username
