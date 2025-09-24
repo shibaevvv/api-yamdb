@@ -14,9 +14,9 @@ from .views import (
 
 v1_router = DefaultRouter()
 v1_router.register('users', UserViewSet, basename='users')
-router.register('categories', CategoryViewSet, basename='category')
-router.register('genres', GenreViewSet, basename='genre')
-router.register('titles', TitleViewSet, basename='title')
+v1_router.register('categories', CategoryViewSet, basename='category')
+v1_router.register('genres', GenreViewSet, basename='genre')
+v1_router.register('titles', TitleViewSet, basename='title')
 
 auth_urls = [
     path('signup/', SignUpView.as_view(), name='signup'),
