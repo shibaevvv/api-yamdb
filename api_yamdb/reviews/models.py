@@ -13,6 +13,7 @@ class Category(models.Model):
     class Meta:
         verbose_name = "Категория"
         verbose_name_plural = "Категории"
+        ordering = ('name',)
 
     def __str__(self):
         return self.name
@@ -26,6 +27,7 @@ class Genre(models.Model):
     class Meta:
         verbose_name = "Жанр"
         verbose_name_plural = "Жанры"
+        ordering = ('name',)
 
     def __str__(self):
         return self.name
@@ -63,10 +65,21 @@ class Title(models.Model):
     class Meta:
         verbose_name = "Произведение"
         verbose_name_plural = "Произведения"
+        ordering = ('-year', 'name')
 
     def __str__(self):
         return self.name
 
+class GenreTitle(models.Model):
+    title = models.ForeignKey(Title, on_delete=models.CASCADE)
+    genre = models.ForeignKey(Genre, on_delete=models.CASCADE)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=('title', 'genre'), name='unique_title_genre'
+            )
+        ]
 
 class Review(models.Model):
     """Отзывы к произведениям."""

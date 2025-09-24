@@ -12,5 +12,6 @@ urlpatterns = [
     path('v1/auth/', include(auth_urls)),
     path('api/v1/titles/<int:title_id>/reviews/', ReviewListCreateView.as_view(), name='reviews-list-create'),
     path('api/v1/titles/<int:title_id>/reviews/<int:review_id>/', ReviewDetailView.as_view(), name='review-detail'),
+path('v1/', include('api.v1.urls')),
 
 ]
