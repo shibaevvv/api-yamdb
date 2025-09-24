@@ -1,7 +1,11 @@
 from django.urls import include, path
+from rest_framework.routers import DefaultRouter
 
 from .views import ReviewListCreateView, ReviewDetailView
-from api.views import SignUpView, TokenView
+from api.views import SignUpView, TokenView, UserViewSet
+
+v1_router = DefaultRouter()
+v1_router.register('users', UserViewSet, basename='users')
 
 auth_urls = [
     path('signup/', SignUpView.as_view(), name='signup'),
@@ -9,6 +13,7 @@ auth_urls = [
 ]
 
 urlpatterns = [
+    path('v1/', include(v1_router.urls)),
     path('v1/auth/', include(auth_urls)),
     path('api/v1/titles/<int:title_id>/reviews/', ReviewListCreateView.as_view(), name='reviews-list-create'),
     path('api/v1/titles/<int:title_id>/reviews/<int:review_id>/', ReviewDetailView.as_view(), name='review-detail'),
