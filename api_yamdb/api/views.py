@@ -1,24 +1,35 @@
 import random
 
 from django.core.mail import send_mail
-from rest_framework import filters, permissions, status, viewsets
+from django.db.models import Avg
+from rest_framework import permissions, status, viewsets, filters as drf_filters
+from rest_framework.exceptions import ValidationError, NotFound, PermissionDenied
 from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError
+
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import AccessToken
 
-
-from rest_framework import generics, status
+from rest_framework import generics
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.pagination import PageNumberPagination
+from django_filters.rest_framework import DjangoFilterBackend
+from django_filters import rest_framework as filters
 
-from reviews.models import Title, Review
-from .serializers import ReviewSerializer
-from .permissions import IsAuthorOrModeratorOrAdmin
+
+from reviews.models import Category, Genre, Title, Review
+from .serializers import (
+    CategorySerializer,
+    GenreSerializer,
+    TitleReadSerializer,
+    TitleWriteSerializer,
+    TokenSerializer,
+    SignUpSerializer,
+    ReviewSerializer,
+)
+from .permissions import IsAdminOrReadOnly, IsAuthorOrModeratorOrAdmin
 
 from api.permissions import IsAdminOnlyPermission
 from api.serializers import (
@@ -184,3 +195,66 @@ class ReviewDetailView(generics.RetrieveUpdateDestroyAPIView):
         # стоит разрешить чтение всем: has_object_permission возвращает True для SAFE_METHODS.
         self.check_object_permissions(self.request, review)
         return review
+
+class CategoryViewSet(viewsets.ModelViewSet):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+    permission_classes = (IsAdminOrReadOnly,)
+    filter_backends = (drf_filters.SearchFilter,)
+    search_fields = ('name',)
+    lookup_field = 'slug'
+
+    def retrieve(self, request, *args, **kwargs):
+        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def update(self, request, *args, **kwargs):
+        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+
+class GenreViewSet(viewsets.ModelViewSet):
+    queryset = Genre.objects.all()
+    serializer_class = GenreSerializer
+    permission_classes = (IsAdminOrReadOnly,)
+    filter_backends = (drf_filters.SearchFilter,)
+    search_fields = ('name',)
+    lookup_field = 'slug'
+
+    def retrieve(self, request, *args, **kwargs):
+        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def update(self, request, *args, **kwargs):
+        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+
+class TitleFilter(filters.FilterSet):
+    genre = filters.ModelMultipleChoiceFilter(
+        field_name='genre__slug',
+        to_field_name='slug',
+        queryset=Genre.objects.all(),
+        conjoined=False,
+    )
+    category = filters.CharFilter(field_name='category__slug')
+    year = filters.NumberFilter(field_name='year')
+    name = filters.CharFilter(field_name='name', lookup_expr='icontains')
+
+    class Meta:
+        model = Title
+        fields = ['genre', 'category', 'year', 'name']
+
+
+class TitleViewSet(viewsets.ModelViewSet):
+    permission_classes = (IsAdminOrReadOnly,)
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = TitleFilter
+
+    def get_queryset(self):
+        return Title.objects.annotate(_avg_score=Avg('reviews__estimation'))
+
+    def get_serializer_class(self):
+        return TitleReadSerializer if self.action in ('list', 'retrieve') else TitleWriteSerializer
+
+    def update(self, request, *args, **kwargs):
+        if request.method != 'PATCH':
+            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        return super().update(request, *args, **kwargs)
+
