@@ -4,11 +4,11 @@ from django.core.mail import send_mail
 from django.db import IntegrityError
 from django.db.models import Avg
 from rest_framework import permissions, status, viewsets, filters as drf_filters
-from rest_framework.exceptions import ValidationError, NotAuthenticated
+from rest_framework.exceptions import ValidationError
 from rest_framework.decorators import action
 
 from rest_framework.generics import get_object_or_404
-from rest_framework.permissions import IsAuthenticated, SAFE_METHODS
+from rest_framework.permissions import SAFE_METHODS
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import AccessToken
@@ -224,12 +224,12 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
     def get_object(self):
         obj = super().get_object()
-        self.check_object_permissions(self.request, obj)   # ← обязательно
+        self.check_object_permissions(self.request, obj)
         return obj
 
 class CommentViewSet(viewsets.ModelViewSet):
     serializer_class = CommentSerializer
-    http_method_names = ['get', 'post', 'patch', 'delete']  # 'post' здесь не нужен для detail, но оставьте, если тесты ожидают; иначе удалите 'post'
+    http_method_names = ['get', 'post', 'patch', 'delete']
     permission_classes = [IsAuthorOrModeratorOrAdmin]
 
     def get_review(self):
