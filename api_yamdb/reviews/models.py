@@ -1,7 +1,9 @@
 import datetime
+
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.core.validators import MinValueValidator, MaxValueValidator
-from users.models import User  # Импорт кастомной модели пользователя
+
+from users.models import User
 
 
 class Category(models.Model):
@@ -70,7 +72,9 @@ class Title(models.Model):
     def __str__(self):
         return self.name
 
+
 class GenreTitle(models.Model):
+    """Связь произведения с жанром."""
     title = models.ForeignKey(Title, on_delete=models.CASCADE)
     genre = models.ForeignKey(Genre, on_delete=models.CASCADE)
 
@@ -80,6 +84,7 @@ class GenreTitle(models.Model):
                 fields=('title', 'genre'), name='unique_title_genre'
             )
         ]
+
 
 class Review(models.Model):
     """Отзывы к произведениям."""

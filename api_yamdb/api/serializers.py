@@ -1,9 +1,7 @@
-import re
-
 from rest_framework import serializers
 
 from api.validators import username_validator
-from reviews.models import Category, Genre, Title, Review, Comment
+from reviews.models import Category, Comment, Genre, Review, Title
 from users.models import User
 
 
@@ -43,29 +41,40 @@ class SelfEditUserSerializer(UserSerializer):
     class Meta(UserSerializer.Meta):
         read_only_fields = ('role',)
 
+
 class CategorySerializer(serializers.ModelSerializer):
+    """Сериализатор для работы с категориями."""
+
     class Meta:
         model = Category
         fields = ('name', 'slug')
 
 
 class GenreSerializer(serializers.ModelSerializer):
+    """Сериализатор для работы с жанрами."""
+
     class Meta:
         model = Genre
         fields = ('name', 'slug')
 
 
 class TitleReadSerializer(serializers.ModelSerializer):
+    """Сериализатор для работы с произмевениями (чтение)."""
+
     genre = GenreSerializer(many=True, read_only=True)
     category = CategorySerializer(read_only=True)
     rating = serializers.IntegerField(source='_avg_score', read_only=True)
 
     class Meta:
         model = Title
-        fields = ('id', 'name', 'year', 'rating', 'description', 'genre', 'category')
+        fields = (
+            'id', 'name', 'year', 'rating', 'description', 'genre', 'category'
+        )
 
 
 class TitleWriteSerializer(serializers.ModelSerializer):
+    """Сериализатор для работы с произмевениями (запись)."""
+
     genre = serializers.SlugRelatedField(
         queryset=Genre.objects.all(), slug_field='slug', many=True
     )
@@ -78,8 +87,9 @@ class TitleWriteSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'year', 'description', 'genre', 'category')
 
 
-
 class ReviewSerializer(serializers.ModelSerializer):
+    """Сериализатор для работы с отзывами."""
+
     author = serializers.ReadOnlyField(source='author.username')
     score = serializers.IntegerField(min_value=1, max_value=10)
     pub_date = serializers.DateTimeField(source='created_at', read_only=True)
@@ -88,7 +98,10 @@ class ReviewSerializer(serializers.ModelSerializer):
         model = Review
         fields = ('id', 'text', 'author', 'score', 'pub_date')
 
+
 class CommentSerializer(serializers.ModelSerializer):
+    """Сериализатор для работы с коментариями."""
+
     author = serializers.ReadOnlyField(source='author.username')
     pub_date = serializers.DateTimeField(source='created_at', read_only=True)
 

@@ -1,9 +1,11 @@
 import csv
 import os
-from django.core.management.base import BaseCommand
+
 from django.conf import settings
-from reviews.models import Category, Genre, Title, GenreTitle
-from users.models import CustomUser as User
+from django.core.management.base import BaseCommand
+
+from reviews.models import Category, Genre, GenreTitle, Title
+from users.models import User
 
 CSV_DIR = os.path.join(settings.BASE_DIR, 'static', 'data')
 
