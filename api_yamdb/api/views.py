@@ -3,39 +3,28 @@ import random
 from django.core.mail import send_mail
 from django.db import IntegrityError
 from django.db.models import Avg
-from rest_framework import permissions, status, viewsets, filters as drf_filters
-from rest_framework.exceptions import ValidationError
-from rest_framework.decorators import action
-
-from rest_framework.generics import get_object_or_404
-from rest_framework.permissions import SAFE_METHODS
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework_simplejwt.tokens import AccessToken
-
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.pagination import PageNumberPagination
 from django_filters.rest_framework import DjangoFilterBackend
 from django_filters import rest_framework as filters
-
-
-from reviews.models import Category, Genre, Title, Review, Comment
-from .serializers import (
-    CategorySerializer,
-    GenreSerializer,
-    TitleReadSerializer,
-    TitleWriteSerializer,
-    TokenSerializer,
-    SignUpSerializer,
-    ReviewSerializer,
-    CommentSerializer
+from rest_framework import (
+    filters as drf_filters, permissions, status, viewsets
 )
-from .permissions import IsAdminOrReadOnly, IsAuthorOrModeratorOrAdmin
+from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
+from rest_framework.generics import get_object_or_404
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.permissions import AllowAny, IsAuthenticated, SAFE_METHODS
+from rest_framework.response import Response
+from rest_framework_simplejwt.tokens import AccessToken
+from rest_framework.views import APIView
 
-from api.permissions import IsAdminOnlyPermission
-from api.serializers import (
-    TokenSerializer, SignUpSerializer, UserSerializer, SelfEditUserSerializer
-)
+from api.permissions import (IsAdminOnlyPermission, IsAdminOrReadOnly,
+                             IsAuthorOrModeratorOrAdmin)
+from api.serializers import (CategorySerializer, CommentSerializer,
+                             GenreSerializer, ReviewSerializer,
+                             SelfEditUserSerializer, SignUpSerializer,
+                             TitleReadSerializer, TitleWriteSerializer,
+                             TokenSerializer, UserSerializer)
+from reviews.models import Category, Comment, Genre, Review, Title
 from users.models import User
 
 
@@ -131,12 +120,16 @@ class UserViewSet(viewsets.ModelViewSet):
 
 
 class StandardResultsSetPagination(PageNumberPagination):
+    """Пагинация."""
+
     page_size = 10
     page_size_query_param = 'page_size'
     max_page_size = 100
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
+    """Вьюмет для работы с категориями."""
+
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     permission_classes = (IsAdminOrReadOnly,)
@@ -152,6 +145,8 @@ class CategoryViewSet(viewsets.ModelViewSet):
 
 
 class GenreViewSet(viewsets.ModelViewSet):
+    """Вьюмет для работы с жанрами."""
+
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
     permission_classes = (IsAdminOrReadOnly,)
@@ -167,6 +162,8 @@ class GenreViewSet(viewsets.ModelViewSet):
 
 
 class TitleFilter(filters.FilterSet):
+    """Фильтр для жанров."""
+
     genre = filters.ModelMultipleChoiceFilter(
         field_name='genre__slug',
         to_field_name='slug',
@@ -183,6 +180,8 @@ class TitleFilter(filters.FilterSet):
 
 
 class TitleViewSet(viewsets.ModelViewSet):
+    """Вьюмет для работы с произведениями."""
+
     permission_classes = (IsAdminOrReadOnly,)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = TitleFilter
@@ -191,7 +190,9 @@ class TitleViewSet(viewsets.ModelViewSet):
         return Title.objects.annotate(_avg_score=Avg('reviews__score'))
 
     def get_serializer_class(self):
-        return TitleReadSerializer if self.action in ('list', 'retrieve') else TitleWriteSerializer
+        return TitleReadSerializer if (
+            self.action in ('list', 'retrieve')
+        ) else TitleWriteSerializer
 
     def update(self, request, *args, **kwargs):
         if request.method != 'PATCH':
@@ -200,6 +201,8 @@ class TitleViewSet(viewsets.ModelViewSet):
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
+    """Вьюмет для работы с отзывами."""
+
     serializer_class = ReviewSerializer
     http_method_names = ['get', 'post', 'patch', 'delete']
     permission_classes = [IsAuthorOrModeratorOrAdmin]
@@ -208,7 +211,9 @@ class ReviewViewSet(viewsets.ModelViewSet):
         return get_object_or_404(Title, pk=self.kwargs.get('title_id'))
 
     def get_queryset(self):
-        return Review.objects.filter(title=self.get_title()).order_by('-created_at')
+        return Review.objects.filter(
+            title=self.get_title()
+        ).order_by('-created_at')
 
     def get_permissions(self):
         if self.request.method in SAFE_METHODS:
@@ -220,24 +225,35 @@ class ReviewViewSet(viewsets.ModelViewSet):
         try:
             serializer.save(author=self.request.user, title=title)
         except IntegrityError:
-            raise ValidationError('Вы уже оставляли отзыв на это произведение.')
+            raise ValidationError(
+                'Вы уже оставляли отзыв на это произведение.'
+            )
 
     def get_object(self):
         obj = super().get_object()
         self.check_object_permissions(self.request, obj)
         return obj
 
+
 class CommentViewSet(viewsets.ModelViewSet):
+    """Вьюмет для работы с коментариями."""
+
     serializer_class = CommentSerializer
     http_method_names = ['get', 'post', 'patch', 'delete']
     permission_classes = [IsAuthorOrModeratorOrAdmin]
 
     def get_review(self):
         title = get_object_or_404(Title, pk=self.kwargs.get('title_id'))
-        return get_object_or_404(Review, pk=self.kwargs.get('review_id'), title=title)
+        return get_object_or_404(
+            Review,
+            pk=self.kwargs.get('review_id'),
+            title=title
+        )
 
     def get_queryset(self):
-        return Comment.objects.filter(review=self.get_review()).order_by('-created_at')
+        return Comment.objects.filter(
+            review=self.get_review()
+        ).order_by('-created_at')
 
     def get_permissions(self):
         if self.request.method in SAFE_METHODS:
