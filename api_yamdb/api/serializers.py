@@ -1,8 +1,7 @@
 from rest_framework import serializers
 
 from api.validators import username_validator
-from reviews.models import Category, Comment, Genre, Review, Title
-from users.models import User
+from reviews.models import Category, Comment, Genre, Review, Title, User
 
 
 class TokenSerializer(serializers.ModelSerializer):
