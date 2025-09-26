@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from api.validators import username_validator
+from reviews.validators import username_validator
 from reviews.models import Category, Comment, Genre, Review, Title, User
 
 
