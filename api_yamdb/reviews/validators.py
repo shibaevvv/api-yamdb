@@ -12,7 +12,7 @@ INVALID_CHARS_ERROR = (
 
 
 def username_validator(username):
-    """Валидатор для проверок поля username."""
+    """Валидатор для проверки поля username."""
     if username in RESERVED_USERNAMES:
         raise ValidationError(INVALID_USERNAME_ERROR.format(username))
     if (invalid_chars := re.findall(r'[^\w.@+-]', username)):

@@ -1,3 +1,4 @@
+import os, string
 from datetime import timedelta
 from pathlib import Path
 
@@ -131,3 +132,10 @@ SIMPLE_JWT = {
 
 EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
 EMAIL_FILE_PATH = BASE_DIR / 'sent_emails'
+
+DEFAULT_FROM_EMAIL = 'noreply@yamdb.ru'
+EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
+EMAIL_FILE_PATH = BASE_DIR / 'sent_emails'
+
+CONFIRMATION_CODE_LENGTH = 6
+CONFIRMATION_CODE_CHARS = string.digits
