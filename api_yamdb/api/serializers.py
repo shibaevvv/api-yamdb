@@ -1,15 +1,13 @@
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 from reviews.validators import username_validator
 from reviews.models import Category, Comment, Genre, Review, Title, User
 
 
-class TokenSerializer(serializers.ModelSerializer):
-    """Сериализатор для JWT-токена"""
-
-    class Meta:
-        model = User
-        fields = ('username', 'confirmation_code')
+class TokenSerializer(serializers.Serializer):
+    username = serializers.CharField(max_length=150, required=True)
+    confirmation_code = serializers.CharField(required=True)
 
 
 class SignUpSerializer(serializers.Serializer):
@@ -96,6 +94,20 @@ class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
         fields = ('id', 'text', 'author', 'score', 'pub_date')
+
+    def validate(self, attrs):
+        request = self.context['request']
+        title_id = self.context['view'].kwargs['title_id']
+
+        if request.method == 'PATCH':
+            return attrs
+
+        if Review.objects.filter(
+                title_id=title_id, author=request.user
+        ).exists():
+            raise ValidationError('Вы уже оставляли отзыв на это произведение.')
+
+        return attrs
 
 
 class CommentSerializer(serializers.ModelSerializer):
