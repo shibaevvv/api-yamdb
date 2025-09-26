@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 
-from reviews.models import Category, Genre, GenreTitle, Title, User
+from reviews.models import Category, Genre, Title, User
 
 admin.site.empty_value_display = 'Не задано'
 
@@ -19,4 +19,3 @@ class UserAdmin(admin.ModelAdmin):
 admin.site.register(Category)
 admin.site.register(Genre)
 admin.site.register(Title)
-admin.site.register(GenreTitle)
