@@ -1,23 +1,19 @@
+import datetime
+
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
-from .validators import validate_year
-# Константы вместо "магических чисел"
+from reviews.constants import (USERNAME_MAX_LENGTH, ROLE_USER, ROLE_ADMIN,
+                               ROLE_MODERATOR, ROLES, EMAIL_MAX_LENGTH,
+                               FIRST_NAME_MAX_LENGTH, LAST_NAME_MAX_LENGTH)
+from reviews.validators import username_validator, validate_year
+
+
 MIN_SCORE = 1
 MAX_SCORE = 10
 MIN_YEAR = 1
-
-ROLE_USER = 'user'
-ROLE_ADMIN = 'admin'
-ROLE_MODERATOR = 'moderator'
-
-ROLES = (
-    (ROLE_USER, 'Пользователь'),
-    (ROLE_ADMIN, 'Администратор'),
-    (ROLE_MODERATOR, 'Модератор'),
-)
 
 
 class User(AbstractUser):
@@ -25,33 +21,37 @@ class User(AbstractUser):
 
     username = models.CharField(
         'Логин',
-        max_length=150,
+        max_length=USERNAME_MAX_LENGTH,
         unique=True,
-        blank=False,
-        null=False
+        validators=(username_validator,)
     )
     email = models.EmailField(
         'Адрес электронной почты',
-        max_length=254,
+        max_length=EMAIL_MAX_LENGTH,
         unique=True,
-        blank=False,
-        null=False
     )
-    first_name = models.CharField('Имя', max_length=150, blank=True)
-    last_name = models.CharField('Фамилия', max_length=150, blank=True)
-    bio = models.TextField('Биография', blank=True,)
+    first_name = models.CharField(
+        'Имя',
+        max_length=FIRST_NAME_MAX_LENGTH,
+        blank=True
+    )
+    last_name = models.CharField(
+        'Фамилия',
+        max_length=LAST_NAME_MAX_LENGTH,
+        blank=True
+    )
+    bio = models.TextField('О себе', blank=True,)
     role = models.CharField(
         'Роль',
-        max_length=20,
+        max_length=max(len(role) for role, _ in ROLES),
         choices=ROLES,
         default=ROLE_USER,
         blank=True
     )
     confirmation_code = models.CharField(
-        verbose_name='Код подтверждения',
-        max_length=255,
+        'Код подтверждения',
+        max_length=settings.CONFIRMATION_CODE_LENGTH,
         null=True,
-        blank=False
     )
 
     class Meta:
