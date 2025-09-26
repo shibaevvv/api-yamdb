@@ -5,7 +5,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 
 from reviews.models import Category, Genre, GenreTitle, Title
-from users.models import User
+from users__.models import User
 
 CSV_DIR = os.path.join(settings.BASE_DIR, 'static', 'data')
 
