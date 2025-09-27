@@ -126,7 +126,7 @@ class Title(models.Model):
         verbose_name='Название'
     )
     year = models.IntegerField(
-        validators=(year_validator,),
+        validators=[year_validator,],
         help_text='Введите год публикации в формате YYYY (например, 2014)',
         verbose_name="Год публикации"
     )
@@ -150,7 +150,7 @@ class Title(models.Model):
         return self.name
 
 
-class AbstractTextModel(models.Model):
+class CreationByAuthorBaseModel(models.Model):
     """Абстрактная модель для отзывов и комментариев."""
     text = models.TextField('Текст')
     pub_date = models.DateTimeField(
@@ -166,9 +166,10 @@ class AbstractTextModel(models.Model):
     class Meta:
         abstract = True
         ordering = ('pub_date',)
+        default_related_name = '%(class)ss'
 
 
-class Review(AbstractTextModel):
+class Review(CreationByAuthorBaseModel):
     """Отзывы к произведениям."""
 
     title = models.ForeignKey(
@@ -177,12 +178,14 @@ class Review(AbstractTextModel):
         verbose_name='Произведение',
     )
     score = models.PositiveSmallIntegerField(
-        validators=[MinValueValidator(
-            MIN_SCORE), MaxValueValidator(MAX_SCORE)],
+        validators=[
+            MinValueValidator(MIN_SCORE),
+            MaxValueValidator(MAX_SCORE),
+        ],
         verbose_name='Оценка',
     )
 
-    class Meta(AbstractTextModel.Meta):
+    class Meta(CreationByAuthorBaseModel.Meta):
         constraints = [
             models.UniqueConstraint(
                 fields=['title', 'author'],
@@ -191,13 +194,12 @@ class Review(AbstractTextModel):
         ]
         verbose_name = 'Отзыв'
         verbose_name_plural = 'Отзывы'
-        default_related_name = 'reviews'
 
     def __str__(self):
         return f'Отзыв от {self.author} к произведению {self.title}'
 
 
-class Comment(AbstractTextModel):
+class Comment(CreationByAuthorBaseModel):
     """Комментарии к отзывам."""
 
     review = models.ForeignKey(
@@ -206,10 +208,9 @@ class Comment(AbstractTextModel):
         verbose_name='Отзыв',
     )
 
-    class Meta(AbstractTextModel.Meta):
+    class Meta(CreationByAuthorBaseModel.Meta):
         verbose_name = 'Комментарий'
         verbose_name_plural = 'Комментарии'
-        default_related_name = 'comments'
 
     def __str__(self):
         return f'Комментарий от {self.author} к отзыву {self.review}'
