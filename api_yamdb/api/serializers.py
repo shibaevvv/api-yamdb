@@ -97,9 +97,10 @@ class TitleWriteSerializer(serializers.ModelSerializer):
 class ReviewSerializer(serializers.ModelSerializer):
     """Сериализатор для работы с отзывами."""
 
-    author = serializers.ReadOnlyField(source='author.username')
-    score = serializers.IntegerField(min_value=1, max_value=10)
-    pub_date = serializers.DateTimeField(source='created_at', read_only=True)
+    author = serializers.SlugRelatedField(
+        read_only=True,
+        slug_field='username'
+    )
 
     class Meta:
         model = Review
@@ -125,10 +126,11 @@ class ReviewSerializer(serializers.ModelSerializer):
 class CommentSerializer(serializers.ModelSerializer):
     """Сериализатор для работы с коментариями."""
 
-    author = serializers.ReadOnlyField(source='author.username')
-    pub_date = serializers.DateTimeField(source='created_at', read_only=True)
+    author = serializers.SlugRelatedField(
+        read_only=True,
+        slug_field='username'
+    )
 
     class Meta:
         model = Comment
         fields = ('id', 'text', 'author', 'pub_date')
-        read_only_fields = ('id', 'author', 'pub_date')

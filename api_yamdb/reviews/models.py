@@ -128,7 +128,7 @@ class Title(models.Model):
         verbose_name='Название'
     )
     year = models.IntegerField(
-        validators=[MaxValueValidator(lambda: datetime.today().year)],
+        validators=[MaxValueValidator(datetime.today().year)],
         help_text='Введите год публикации в формате YYYY (например, 2014)',
         verbose_name="Год публикации"
     )
@@ -155,7 +155,7 @@ class Title(models.Model):
 class AbstractTextModel(models.Model):
     """Абстрактная модель для отзывов и комментариев."""
     text = models.TextField('Текст')
-    created_at = models.DateTimeField(
+    pub_date = models.DateTimeField(
         auto_now_add=True,
         verbose_name='Добавлено'
     )
@@ -167,7 +167,7 @@ class AbstractTextModel(models.Model):
 
     class Meta:
         abstract = True
-        ordering = ('created_at',)
+        ordering = ('pub_date',)
 
 
 class Review(AbstractTextModel):
