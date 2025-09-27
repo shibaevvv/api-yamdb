@@ -138,3 +138,4 @@ CONFIRMATION_CODE_CHARS = string.digits
 
 RESERVED_USERNAMES = ['me']
 INVALID_CHARS_REGEX = r'[^\w.@+-]'
+ME_URL_PATH = 'me'

@@ -18,11 +18,13 @@ from rest_framework_simplejwt.tokens import AccessToken
 
 from api.permissions import (IsAdminOnlyPermission, IsAdminOrReadOnly,
                              IsAuthorOrModeratorOrAdmin)
-from api.serializers import (CategorySerializer, CommentSerializer,
-                             GenreSerializer, ReviewSerializer,
-                             SelfEditUserSerializer, SignUpSerializer,
-                             TitleReadSerializer, TitleWriteSerializer,
-                             TokenSerializer, UserSerializer)
+from api.serializers import (
+    CategorySerializer, CommentSerializer,
+    GenreSerializer, ReviewSerializer,
+    SelfEditUserSerializer, SignUpSerializer,
+    TitleReadSerializer, TitleWriteSerializer,
+    TokenSerializer, UserSerializer,
+) 
 from reviews.admin import User
 from reviews.models import Category, Comment, Genre, Review, Title
 
@@ -42,21 +44,19 @@ def signup(request):
     if User.objects.filter(username=username).exclude(email=email).exists():
         raise ValidationError({'username': 'Этот username уже занят.'})
 
-    user, created = User.objects.get_or_create(
+    user, _ = User.objects.get_or_create(
         username=username,
-        defaults={'email': email}
+        email=email
     )
-
-    code = ''.join(
+    user.confirmation_code = ''.join(
         random.choices(settings.CONFIRMATION_CODE_CHARS,
                        k=settings.CONFIRMATION_CODE_LENGTH)
     )
-    user.confirmation_code = code
     user.save(update_fields=['confirmation_code'])
 
     send_mail(
         subject='Код подтверждения YaMDb',
-        message=f'Ваш код подтверждения: {code}',
+        message=f'Ваш код подтверждения: {user.confirmation_code}',
         recipient_list=[user.email],
         from_email=settings.DEFAULT_FROM_EMAIL,
         fail_silently=False,
@@ -84,10 +84,6 @@ def token(request):
         raise ValidationError(
             {'confirmation_code': 'Неверный код подтверждения.'}
         )
-
-    user.confirmation_code = ''
-    user.save(update_fields=['confirmation_code'])
-
     token_str = str(AccessToken.for_user(user))
     return Response({'token': token_str}, status=status.HTTP_200_OK)
 
@@ -101,12 +97,10 @@ class UserViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAdminOnlyPermission,)
     http_method_names = ('get', 'post', 'patch', 'delete')
 
-    ME_URL_PATH = 'me'
-
     @action(detail=False, methods=['get', 'patch'],
             permission_classes=[IsAuthenticated],
-            url_path=ME_URL_PATH)
-    def me(self, request):
+            url_path=settings.ME_URL_PATH)
+    def user_self_page(self, request):
         """Работа со своей учётной записью."""
         user = request.user
         if request.method != 'PATCH':
@@ -120,14 +114,6 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-class StandardResultsSetPagination(PageNumberPagination):
-    """Пагинация."""
-
-    page_size = 10
-    page_size_query_param = 'page_size'
-    max_page_size = 100
 
 
 class ListCreateDestroySlugViewSet(
@@ -184,7 +170,7 @@ class TitleViewSet(viewsets.ModelViewSet):
 
     queryset = Title.objects.annotate(
         rating=Avg('reviews__score')
-    ).order_by('-year', 'name')
+    ).order_by(*Title._meta.ordering)
     permission_classes = (IsAdminOrReadOnly,)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = TitleFilter
@@ -204,8 +190,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthorOrModeratorOrAdmin,)
 
     def get_queryset(self):
-        title_id = self.kwargs['title_id']
-        return Review.objects.filter(title_id=title_id)
+        return Review.objects.filter(title_id=self.kwargs['title_id'])
 
     def get_permissions(self):
         if self.request.method in SAFE_METHODS:
