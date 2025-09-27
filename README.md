@@ -14,12 +14,9 @@ YaMDb - приложение сбора отзывов пользователе�
 ---
 
 ## Как запустить проект:
-Клонировать репозиторий и перейти в него в командной строке:
+Клонировать репозиторий:
 ```
 git clone https://github.com/shibaevvv/api-yamdb
-```
-```
-cd api_yamdb
 ```
 Cоздать и активировать виртуальное окружение:
 ```
@@ -28,14 +25,17 @@ python3 -m venv venv | python -m venv venv
 ```
 source env/bin/activate | source venv/Scripts/activate
 ```
+Обновить pip и установить зависимости из файла requirements.txt:
 ```
 python3 -m pip install --upgrade pip | python -m pip install --upgrade pip
 ```
-Установить зависимости из файла requirements.txt:
 ```
 pip install -r requirements.txt
 ```
 Перейти в каталог api_yamdb и выполнить миграции:
+```
+cd api_yamdb
+```
 ```
 python3 manage.py migrate | python manage.py migrate
 ```
@@ -122,7 +122,7 @@ python3 manage.py runserver | python manage.py runserver
 
 ## Полная документация
 Подробная документация в формате openapi доступны в файле проекта api-yamdb/api_yamdb/static/redoc.yaml.
-Также в браузере по адресу http://localhost:port/redoc/ (необходимо запустить проект).
+Также в браузере по адресу [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc) (необходимо запустить проект).
 
 ---
 
