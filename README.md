@@ -14,9 +14,12 @@ YaMDb - приложение сбора отзывов пользователе�
 ---
 
 ## Как запустить проект:
-Клонировать репозиторий:
+Клонировать репозиторий и перейти в папку с проектом:
 ```
 git clone https://github.com/shibaevvv/api-yamdb
+```
+```
+api-yamdb
 ```
 Cоздать и активировать виртуальное окружение:
 ```
@@ -123,6 +126,32 @@ python3 manage.py runserver | python manage.py runserver
 ## Полная документация
 Подробная документация в формате openapi доступны в файле проекта api-yamdb/api_yamdb/static/redoc.yaml.
 Также в браузере по адресу [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc) (необходимо запустить проект).
+
+---
+
+## Импорт данных из CSV в БД (одной командой)
+
+1. Поместите файлы-справочники в папку проекта  
+   `static/data/`  
+   (файлы: users.csv, category.csv, genre.csv, titles.csv, review.csv, comments.csv, genre_title.csv).
+
+2. Выполните миграции:
+   ```bash
+    python manage.py migrate
+   ```
+   
+3. Загрузите данные:
+первый запуск – очистить таблицы и наполнить заново
+   ```bash
+   python manage.py load_data --wipe
+    ```
+
+последующие – просто добавить новое (без очистки)
+   ```bash
+   python manage.py load_data
+   ```
+
+4. Проверьте объектами через админку или энд-поинты API.
 
 ---
 
