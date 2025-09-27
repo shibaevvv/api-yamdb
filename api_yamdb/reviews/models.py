@@ -121,6 +121,10 @@ class Genre(AbstractNameSlugModel):
         verbose_name_plural = 'Жанры'
 
 
+def get_current_year():
+    return datetime.today().year
+
+
 class Title(models.Model):
     """Произведения (фильмы, книги, музыка и т.д.)."""
     name = models.CharField(
@@ -128,7 +132,7 @@ class Title(models.Model):
         verbose_name='Название'
     )
     year = models.IntegerField(
-        validators=[MaxValueValidator(datetime.today().year)],
+        validators=[MaxValueValidator(get_current_year())],
         help_text='Введите год публикации в формате YYYY (например, 2014)',
         verbose_name="Год публикации"
     )
