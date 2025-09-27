@@ -1,3 +1,4 @@
+from django.conf import settings
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -11,9 +12,13 @@ from reviews.validators import username_validator
 class TokenSerializer(serializers.Serializer):
     username = serializers.CharField(
         max_length=USERNAME_MAX_LENGTH,
+        required=True,
+        validators=[username_validator,]
+    )
+    confirmation_code = serializers.CharField(
+        max_length=settings.CONFIRMATION_CODE_LENGTH,
         required=True
     )
-    confirmation_code = serializers.CharField(required=True)
 
 
 class SignUpSerializer(serializers.Serializer):
@@ -76,7 +81,7 @@ class TitleReadSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'name', 'year', 'rating', 'description', 'genre', 'category'
         )
-        read_only_fields = ('id', 'name', 'year', 'rating', 'description',)
+        read_only_fields = fields
 
 
 class TitleWriteSerializer(serializers.ModelSerializer):
@@ -119,8 +124,9 @@ class ReviewSerializer(serializers.ModelSerializer):
         if Review.objects.filter(
                 title_id=title_id, author=request.user
         ).exists():
+            title = Title.objects.get(id=title_id)
             raise ValidationError(
-                'Вы уже оставляли отзыв на это произведение.'
+                f'Отзыв на произведение "{title.name}" оставлен ранее.'
             )
 
         return attrs
