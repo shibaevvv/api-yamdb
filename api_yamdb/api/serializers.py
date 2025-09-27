@@ -89,6 +89,9 @@ class TitleWriteSerializer(serializers.ModelSerializer):
         queryset=Category.objects.all(), slug_field='slug'
     )
 
+    def to_representation(self, value):
+        return TitleReadSerializer(value).data
+
     class Meta:
         model = Title
         fields = ('id', 'name', 'year', 'description', 'genre', 'category')
