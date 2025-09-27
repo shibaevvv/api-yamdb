@@ -1,11 +1,9 @@
-from datetime import datetime
-
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
-from reviews.validators import username_validator
+from reviews.validators import username_validator, year_validator
 
 ROLE_USER = 'user'
 ROLE_ADMIN = 'admin'
@@ -74,7 +72,7 @@ class User(AbstractUser):
 
     def is_admin(self):
         """Метод для проверки, является ли пользователь администратором."""
-        return (self.role == ROLE_ADMIN or self.is_staff)
+        return self.role == ROLE_ADMIN or self.is_staff
 
     def is_moderator(self):
         """Метод для проверки, является ли пользователь модератором."""
@@ -121,10 +119,6 @@ class Genre(AbstractNameSlugModel):
         verbose_name_plural = 'Жанры'
 
 
-def get_current_year():
-    return datetime.today().year
-
-
 class Title(models.Model):
     """Произведения (фильмы, книги, музыка и т.д.)."""
     name = models.CharField(
@@ -132,7 +126,7 @@ class Title(models.Model):
         verbose_name='Название'
     )
     year = models.IntegerField(
-        validators=[MaxValueValidator(get_current_year())],
+        validators=(year_validator,),
         help_text='Введите год публикации в формате YYYY (например, 2014)',
         verbose_name="Год публикации"
     )
