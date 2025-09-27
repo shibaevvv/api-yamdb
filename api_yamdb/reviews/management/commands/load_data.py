@@ -3,10 +3,10 @@ import os
 from collections import Counter
 
 from django.conf import settings
-from django.core.management.base import BaseCommand, CommandError
-from django.db import transaction, IntegrityError
+from django.core.management.base import BaseCommand
+from django.db import IntegrityError, transaction
 
-from reviews.models import Category, Genre, GenreTitle, Title, User
+from reviews.models import Category, Genre, Title, User
 
 CSV_DIR = os.path.join(settings.BASE_DIR, 'static', 'data')
 
@@ -15,7 +15,6 @@ MODEL_CSV = {
     Category: 'category.csv',
     Genre: 'genre.csv',
     Title: 'titles.csv',
-    GenreTitle: 'genre_title.csv',
 }
 
 FK_FIELDS = {

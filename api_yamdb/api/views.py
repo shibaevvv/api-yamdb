@@ -1,7 +1,6 @@
 import random
 
 from django.conf import settings
-from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.db.models import Avg
 from django_filters.rest_framework import DjangoFilterBackend
@@ -13,7 +12,7 @@ from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.permissions import AllowAny, IsAuthenticated, SAFE_METHODS
+from rest_framework.permissions import SAFE_METHODS, AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 
@@ -24,16 +23,14 @@ from api.serializers import (CategorySerializer, CommentSerializer,
                              SelfEditUserSerializer, SignUpSerializer,
                              TitleReadSerializer, TitleWriteSerializer,
                              TokenSerializer, UserSerializer)
+from reviews.admin import User
 from reviews.models import Category, Comment, Genre, Review, Title
 
-User = get_user_model()
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def signup(request):
-    """
-    Регистрация нового пользователя и/или повторная отправка кода подтверждения.
-    """
+    """Регистрация нового пользователя и/или отправка проверочного кода."""
     serializer = SignUpSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
 
@@ -72,7 +69,8 @@ def signup(request):
 def token(request):
     """
     Выдача JWT-токена при предъявлении валидного одноразового кода.
-    Код после успешной выдачи токена «сбрасывается» (становится недействительным).
+    Код после успешной выдачи токена «сбрасывается»
+    (становится недействительным).
     """
     serializer = TokenSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
@@ -83,7 +81,9 @@ def token(request):
     user = get_object_or_404(User, username=username)
 
     if user.confirmation_code != code or not code:
-        raise ValidationError({'confirmation_code': 'Неверный код подтверждения.'})
+        raise ValidationError(
+            {'confirmation_code': 'Неверный код подтверждения.'}
+        )
 
     user.confirmation_code = ''
     user.save(update_fields=['confirmation_code'])
@@ -109,15 +109,16 @@ class UserViewSet(viewsets.ModelViewSet):
     def me(self, request):
         """Работа со своей учётной записью."""
         user = request.user
-        if request.method == 'PATCH':
-            serializer = SelfEditUserSerializer(
-                user, data=request.data, partial=True
+        if request.method != 'PATCH':
+            return Response(
+                self.get_serializer(user).data,
+                status=status.HTTP_200_OK
             )
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-
-        serializer = self.get_serializer(user)
+        serializer = SelfEditUserSerializer(
+            user, data=request.data, partial=True
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -127,6 +128,7 @@ class StandardResultsSetPagination(PageNumberPagination):
     page_size = 10
     page_size_query_param = 'page_size'
     max_page_size = 100
+
 
 class ListCreateDestroySlugViewSet(
     mixins.ListModelMixin,
@@ -144,6 +146,7 @@ class ListCreateDestroySlugViewSet(
     lookup_field = 'slug'
     http_method_names = ('get', 'post', 'delete')
 
+
 class CategoryViewSet(ListCreateDestroySlugViewSet):
     """Вьюмет для работы с категориями."""
 
@@ -156,7 +159,6 @@ class GenreViewSet(ListCreateDestroySlugViewSet):
 
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
-
 
 
 class TitleFilter(filters.FilterSet):
@@ -181,7 +183,7 @@ class TitleViewSet(viewsets.ModelViewSet):
     """Вьюмет для работы с произведениями."""
 
     queryset = Title.objects.annotate(
-        _avg_score=Avg('reviews__score')
+        rating=Avg('reviews__score')
     ).order_by('-year', 'name')
     permission_classes = (IsAdminOrReadOnly,)
     filter_backends = (DjangoFilterBackend,)
@@ -214,6 +216,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
         title = get_object_or_404(Title, pk=self.kwargs['title_id'])
         serializer.save(author=self.request.user, title=title)
 
+
 class CommentViewSet(viewsets.ModelViewSet):
     """Вьюмет для работы с коментариями."""
 
@@ -231,8 +234,9 @@ class CommentViewSet(viewsets.ModelViewSet):
         return super().get_permissions()
 
     def perform_create(self, serializer):
-        review = get_object_or_404(Review,
+        review = get_object_or_404(
+            Review,
             pk=self.kwargs['review_id'],
-            title_id=self.kwargs['title_id'])
+            title_id=self.kwargs['title_id']
+        )
         serializer.save(author=self.request.user, review=review)
-

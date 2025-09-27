@@ -1,14 +1,20 @@
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 
-class IsAdminOrReadOnly(BasePermission):
+class IsAdminOnlyPermission(BasePermission):
+    """Доступ только с ролью администратора."""
+
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.is_admin()
+
+
+class IsAdminOrReadOnly(IsAdminOnlyPermission):
     """Права для категорий / жанров / произведений."""
     def has_permission(self, request, view):
         return (
             request.method in SAFE_METHODS or (
-                (request.user and request.user.is_authenticated and (
-                    request.user.role == 'admin' or request.user.is_superuser
-
+                (request.user.is_authenticated and (
+                    super().has_permission(request, view)
                 )
                 )
             )
@@ -24,7 +30,7 @@ class IsAuthorOrModeratorOrAdmin(BasePermission):
 
     def has_permission(self, request, view):
         return request.method in SAFE_METHODS or (
-            request.user and request.user.is_authenticated
+            request.user.is_authenticated
         )
 
     def has_object_permission(self, request, view, obj):
@@ -35,11 +41,4 @@ class IsAuthorOrModeratorOrAdmin(BasePermission):
             return False
         if obj.author == user or user.is_staff or user.is_superuser:
             return True
-        return getattr(user, 'role', None) in ('moderator', 'admin')
-
-
-class IsAdminOnlyPermission(BasePermission):
-    """Доступ только с ролью администратора."""
-
-    def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.is_admin()
+        return request.user.is_moderator() or request.user.is_admin()

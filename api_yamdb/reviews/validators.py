@@ -1,8 +1,8 @@
-import datetime, re
+import re
 
 from rest_framework.serializers import ValidationError
 
-from reviews.constants import RESERVED_USERNAMES
+RESERVED_USERNAMES = ['me']
 
 INVALID_USERNAME_ERROR = '{} - недопустимый логин пользователя!'
 INVALID_CHARS_ERROR = (
@@ -20,13 +20,3 @@ def username_validator(username):
             ''.join(set(invalid_chars))
         ))
     return username
-
-
-def validate_year(value):
-    current_year = datetime.date.today().year
-    if value > current_year:
-        raise ValidationError(
-            f'Год не может быть больше {current_year}.'
-        )
-    if value < 1:
-        raise ValidationError('Год не может быть меньше 1.')
