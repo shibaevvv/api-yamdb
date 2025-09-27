@@ -1,8 +1,7 @@
 import re
 
+from django.conf import settings
 from rest_framework.serializers import ValidationError
-
-RESERVED_USERNAMES = ['me']
 
 INVALID_USERNAME_ERROR = '{} - недопустимый логин пользователя!'
 INVALID_CHARS_ERROR = (
@@ -13,9 +12,9 @@ INVALID_CHARS_ERROR = (
 
 def username_validator(username):
     """Валидатор для проверки поля username."""
-    if username in RESERVED_USERNAMES:
+    if username in settings.RESERVED_USERNAMES:
         raise ValidationError(INVALID_USERNAME_ERROR.format(username))
-    if (invalid_chars := re.findall(r'[^\w.@+-]', username)):
+    if (invalid_chars := re.findall(settings.INVALID_CHARS_REGEX, username)):
         raise ValidationError(INVALID_CHARS_ERROR.format(
             ''.join(set(invalid_chars))
         ))
