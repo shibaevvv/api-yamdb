@@ -1,6 +1,8 @@
 import re
+from datetime import datetime
 
 from django.conf import settings
+from django.core.validators import MaxValueValidator
 from rest_framework.serializers import ValidationError
 
 INVALID_USERNAME_ERROR = '{} - недопустимый логин пользователя!'
@@ -19,3 +21,7 @@ def username_validator(username):
             ''.join(set(invalid_chars))
         ))
     return username
+
+
+def year_validator(year):
+    return MaxValueValidator(datetime.today().year) or year
