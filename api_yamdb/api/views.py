@@ -40,11 +40,12 @@ def signup(request):
     email = serializer.validated_data['email']
     try:
         user, _ = User.objects.get_or_create(username=username, email=email)
-    except IntegrityError as error:
+    except IntegrityError:
         raise ValidationError(
-            {'username': 'username уже занят.'}
-            if 'reviews_user.username' in error.args
-            else {'email': 'email уже занят.'}
+            {'error': 'username уже занят.'}
+            if User.objects.filter(
+                email=serializer.validated_data['username']).exists()
+            else {'error': 'email уже занят.'}
         )
     user.confirmation_code = ''.join(
         random.choices(settings.CONFIRMATION_CODE_CHARS,
@@ -71,7 +72,7 @@ def token(request):
     code = serializer.validated_data['confirmation_code']
     user = get_object_or_404(User, username=username)
     if user.confirmation_code != code or not code:
-        if user.confirmation_code != '':
+        if user.confirmation_code:
             user.confirmation_code = ''
             user.save(update_fields=['confirmation_code'])
         raise ValidationError(
@@ -84,6 +85,8 @@ def token(request):
 
 
 class UserViewSet(viewsets.ModelViewSet):
+    """Вьюсет для работы с пользователем."""
+
     queryset = User.objects.all()
     serializer_class = UserSerializer
     filter_backends = (drf_filters.SearchFilter,)
@@ -121,6 +124,7 @@ class ListCreateDestroySlugViewSet(
     Только список, создание и удаление.
     Для моделей с полем slug.
     """
+
     permission_classes = (IsAdminOrReadOnly,)
     filter_backends = (drf_filters.SearchFilter,)
     search_fields = ('name',)

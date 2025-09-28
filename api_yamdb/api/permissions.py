@@ -10,6 +10,7 @@ class IsAdminOnlyPermission(BasePermission):
 
 class IsAdminOrReadOnly(IsAdminOnlyPermission):
     """Права для категорий / жанров / произведений."""
+
     def has_permission(self, request, view):
         return (
             request.method in SAFE_METHODS or (
