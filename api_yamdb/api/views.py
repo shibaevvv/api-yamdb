@@ -25,7 +25,7 @@ from api.serializers import (
     SelfEditUserSerializer, SignUpSerializer,
     TitleReadSerializer, TitleWriteSerializer,
     TokenSerializer, UserSerializer,
-) 
+)
 from reviews.admin import User
 from reviews.models import Category, Comment, Genre, Review, Title
 
@@ -78,6 +78,8 @@ def token(request):
     user = get_object_or_404(User, username=username)
 
     if user.confirmation_code != code or not code:
+        user.confirmation_code = ''
+        user.save(update_fields=['confirmation_code'])
         raise ValidationError(
             {'confirmation_code': 'Неверный код подтверждения.'}
         )
