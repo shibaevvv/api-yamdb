@@ -8,30 +8,32 @@ from reviews.models import (
 )
 from reviews.validators import username_validator
 
+REVIEW_EXISTS_ERROR = 'Отзыв на произведение "{}" оставлен ранее.'
 
-class TokenSerializer(serializers.Serializer):
+
+class TokenSignUpBaseSerializer(serializers.Serializer):
+    """Базовый сериализатор для регистрации и получения JWT-токена."""
+
     username = serializers.CharField(
         max_length=USERNAME_MAX_LENGTH,
         required=True,
         validators=[username_validator,]
     )
+
+
+class TokenSerializer(TokenSignUpBaseSerializer):
+    """Сериализатор для получение JWT-токена."""
+
     confirmation_code = serializers.CharField(
         max_length=settings.CONFIRMATION_CODE_LENGTH,
         required=True
     )
 
 
-class SignUpSerializer(serializers.Serializer):
-    """Сериализатор для получение кода подтверждения."""
+class SignUpSerializer(TokenSignUpBaseSerializer):
+    """Сериализатор для регистрации и получения кода подтверждения."""
 
     email = serializers.EmailField(max_length=EMAIL_MAX_LENGTH, required=True)
-    username = serializers.CharField(
-        max_length=USERNAME_MAX_LENGTH,
-        required=True
-    )
-
-    def validate_username(self, username):
-        return username_validator(username)
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -116,19 +118,15 @@ class ReviewSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         request = self.context['request']
-        title_id = self.context['view'].kwargs['title_id']
-
         if request.method == 'PATCH':
             return attrs
-
+        title_id = self.context['view'].kwargs['title_id']
         if Review.objects.filter(
                 title_id=title_id, author=request.user
         ).exists():
-            title = Title.objects.get(id=title_id)
             raise ValidationError(
-                f'Отзыв на произведение "{title.name}" оставлен ранее.'
+                REVIEW_EXISTS_ERROR.format(Title.objects.get(id=title_id).name)
             )
-
         return attrs
 
 

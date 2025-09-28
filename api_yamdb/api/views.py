@@ -16,8 +16,9 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 
-from api.permissions import (IsAdminOnlyPermission, IsAdminOrReadOnly,
-                             IsAuthorOrModeratorOrAdmin)
+from api.permissions import (
+    IsAdminOnlyPermission, IsAdminOrReadOnly, IsAuthorOrModeratorOrAdmin
+)
 from api.serializers import (
     CategorySerializer, CommentSerializer,
     GenreSerializer, ReviewSerializer,
@@ -63,27 +64,23 @@ def signup(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def token(request):
-    """
-    Выдача JWT-токена при предъявлении валидного одноразового кода.
-    Код после успешной выдачи токена «сбрасывается»
-    (становится недействительным).
-    """
+    """Выдача JWT-токена при предъявлении валидного пин-кода."""
     serializer = TokenSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-
     username = serializer.validated_data['username']
     code = serializer.validated_data['confirmation_code']
-
     user = get_object_or_404(User, username=username)
-
     if user.confirmation_code != code or not code:
-        user.confirmation_code = ''
-        user.save(update_fields=['confirmation_code'])
+        if user.confirmation_code != '':
+            user.confirmation_code = ''
+            user.save(update_fields=['confirmation_code'])
         raise ValidationError(
             {'confirmation_code': 'Неверный код подтверждения.'}
         )
-    token_str = str(AccessToken.for_user(user))
-    return Response({'token': token_str}, status=status.HTTP_200_OK)
+    return Response(
+        {'token': str(AccessToken.for_user(user))},
+        status=status.HTTP_200_OK
+    )
 
 
 class UserViewSet(viewsets.ModelViewSet):
