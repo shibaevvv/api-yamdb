@@ -2,6 +2,7 @@ import random
 
 from django.conf import settings
 from django.core.mail import send_mail
+from django.db import IntegrityError
 from django.db.models import Avg
 from django_filters.rest_framework import DjangoFilterBackend
 from django_filters import rest_framework as filters
@@ -18,11 +19,13 @@ from rest_framework_simplejwt.tokens import AccessToken
 
 from api.permissions import (IsAdminOnlyPermission, IsAdminOrReadOnly,
                              IsAuthorOrModeratorOrAdmin)
-from api.serializers import (CategorySerializer, CommentSerializer,
-                             GenreSerializer, ReviewSerializer,
-                             SelfEditUserSerializer, SignUpSerializer,
-                             TitleReadSerializer, TitleWriteSerializer,
-                             TokenSerializer, UserSerializer)
+from api.serializers import (
+    CategorySerializer, CommentSerializer,
+    GenreSerializer, ReviewSerializer,
+    SelfEditUserSerializer, SignUpSerializer,
+    TitleReadSerializer, TitleWriteSerializer,
+    TokenSerializer, UserSerializer,
+)
 from reviews.admin import User
 from reviews.models import Category, Comment, Genre, Review, Title
 
@@ -33,30 +36,24 @@ def signup(request):
     """Регистрация нового пользователя и/или отправка проверочного кода."""
     serializer = SignUpSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-
     username = serializer.validated_data['username']
     email = serializer.validated_data['email']
-
-    if User.objects.filter(email=email).exclude(username=username).exists():
-        raise ValidationError({'email': 'Этот e-mail уже занят.'})
-    if User.objects.filter(username=username).exclude(email=email).exists():
-        raise ValidationError({'username': 'Этот username уже занят.'})
-
-    user, created = User.objects.get_or_create(
-        username=username,
-        defaults={'email': email}
-    )
-
-    code = ''.join(
+    try:
+        user, _ = User.objects.get_or_create(username=username, email=email)
+    except IntegrityError as error:
+        raise ValidationError(
+            {'username': 'username уже занят.'}
+            if 'reviews_user.username' in error.args
+            else {'email': 'email уже занят.'}
+        )
+    user.confirmation_code = ''.join(
         random.choices(settings.CONFIRMATION_CODE_CHARS,
                        k=settings.CONFIRMATION_CODE_LENGTH)
     )
-    user.confirmation_code = code
     user.save(update_fields=['confirmation_code'])
-
     send_mail(
         subject='Код подтверждения YaMDb',
-        message=f'Ваш код подтверждения: {code}',
+        message=f'Ваш код подтверждения: {user.confirmation_code}',
         recipient_list=[user.email],
         from_email=settings.DEFAULT_FROM_EMAIL,
         fail_silently=False,
@@ -81,13 +78,11 @@ def token(request):
     user = get_object_or_404(User, username=username)
 
     if user.confirmation_code != code or not code:
+        user.confirmation_code = ''
+        user.save(update_fields=['confirmation_code'])
         raise ValidationError(
             {'confirmation_code': 'Неверный код подтверждения.'}
         )
-
-    user.confirmation_code = ''
-    user.save(update_fields=['confirmation_code'])
-
     token_str = str(AccessToken.for_user(user))
     return Response({'token': token_str}, status=status.HTTP_200_OK)
 
@@ -101,12 +96,10 @@ class UserViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAdminOnlyPermission,)
     http_method_names = ('get', 'post', 'patch', 'delete')
 
-    ME_URL_PATH = 'me'
-
     @action(detail=False, methods=['get', 'patch'],
             permission_classes=[IsAuthenticated],
-            url_path=ME_URL_PATH)
-    def me(self, request):
+            url_path=settings.ME_URL_PATH)
+    def user_self_page(self, request):
         """Работа со своей учётной записью."""
         user = request.user
         if request.method != 'PATCH':
@@ -120,14 +113,6 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-class StandardResultsSetPagination(PageNumberPagination):
-    """Пагинация."""
-
-    page_size = 10
-    page_size_query_param = 'page_size'
-    max_page_size = 100
 
 
 class ListCreateDestroySlugViewSet(
@@ -184,7 +169,7 @@ class TitleViewSet(viewsets.ModelViewSet):
 
     queryset = Title.objects.annotate(
         rating=Avg('reviews__score')
-    ).order_by('-year', 'name')
+    ).order_by(*Title._meta.ordering)
     permission_classes = (IsAdminOrReadOnly,)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = TitleFilter
@@ -203,18 +188,14 @@ class ReviewViewSet(viewsets.ModelViewSet):
     http_method_names = ('get', 'post', 'patch', 'delete')
     permission_classes = (IsAuthorOrModeratorOrAdmin,)
 
-    def get_queryset(self):
-        title_id = self.kwargs['title_id']
-        return Review.objects.filter(title_id=title_id)
+    def get_title(self):
+        return get_object_or_404(Title, id=self.kwargs['title_id'])
 
-    def get_permissions(self):
-        if self.request.method in SAFE_METHODS:
-            return [AllowAny()]
-        return super().get_permissions()
+    def get_queryset(self):
+        return self.get_title().reviews.all()
 
     def perform_create(self, serializer):
-        title = get_object_or_404(Title, pk=self.kwargs['title_id'])
-        serializer.save(author=self.request.user, title=title)
+        serializer.save(author=self.request.user, title=self.get_title())
 
 
 class CommentViewSet(viewsets.ModelViewSet):
@@ -224,19 +205,11 @@ class CommentViewSet(viewsets.ModelViewSet):
     http_method_names = ('get', 'post', 'patch', 'delete')
     permission_classes = (IsAuthorOrModeratorOrAdmin,)
 
-    def get_queryset(self):
-        review_id = self.kwargs['review_id']
-        return Comment.objects.filter(review_id=review_id)
+    def get_review(self):
+        return get_object_or_404(Review, id=self.kwargs['review_id'])
 
-    def get_permissions(self):
-        if self.request.method in SAFE_METHODS:
-            return [AllowAny()]
-        return super().get_permissions()
+    def get_queryset(self):
+        return self.get_review().comments.all()
 
     def perform_create(self, serializer):
-        review = get_object_or_404(
-            Review,
-            pk=self.kwargs['review_id'],
-            title_id=self.kwargs['title_id']
-        )
-        serializer.save(author=self.request.user, review=review)
+        serializer.save(author=self.request.user, review=self.get_review())
