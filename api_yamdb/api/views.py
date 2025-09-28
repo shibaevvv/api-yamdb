@@ -43,7 +43,7 @@ def signup(request):
     except IntegrityError as error:
         raise ValidationError(
             {'username': 'username уже занят.'}
-            if 'reviews_user.username' in str(error.args)
+            if 'reviews_user.username' in error.args
             else {'email': 'email уже занят.'}
         )
     user.confirmation_code = ''.join(
