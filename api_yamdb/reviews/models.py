@@ -1,9 +1,11 @@
+from datetime import datetime
+
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
-from reviews.validators import username_validator, year_validator
+from reviews.validators import username_validator
 
 ROLE_USER = 'user'
 ROLE_ADMIN = 'admin'
@@ -119,6 +121,10 @@ class Genre(AbstractNameSlugModel):
         verbose_name_plural = 'Жанры'
 
 
+def get_current_year():
+    return datetime.today().year
+
+
 class Title(models.Model):
     """Произведения (фильмы, книги, музыка и т.д.)."""
     name = models.CharField(
@@ -126,7 +132,7 @@ class Title(models.Model):
         verbose_name='Название'
     )
     year = models.IntegerField(
-        validators=[year_validator,],
+        validators=[MaxValueValidator(get_current_year),],
         help_text='Введите год публикации в формате YYYY (например, 2014)',
         verbose_name="Год публикации"
     )
