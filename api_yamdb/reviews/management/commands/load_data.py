@@ -6,7 +6,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db import IntegrityError, transaction
 
-from reviews.models import Category, Genre, Title, User
+from reviews.models import Category, Comment, Genre, Review, Title, User
 
 CSV_DIR = os.path.join(settings.BASE_DIR, 'static', 'data')
 
@@ -15,6 +15,9 @@ MODEL_CSV = {
     Category: 'category.csv',
     Genre: 'genre.csv',
     Title: 'titles.csv',
+    Review: 'review.csv',
+    Comment: 'comments.csv',
+    Title.genre.through: 'genre_title.csv',
 }
 
 FK_FIELDS = {
