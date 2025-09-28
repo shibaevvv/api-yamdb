@@ -5,7 +5,7 @@ from django.contrib.auth.models import AbstractUser
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
-from reviews.validators import username_validator, year_validator
+from reviews.validators import username_validator
 
 ROLE_USER = 'user'
 ROLE_ADMIN = 'admin'
@@ -132,7 +132,7 @@ class Title(models.Model):
         verbose_name='Название'
     )
     year = models.IntegerField(
-        validators=[MaxValueValidator(get_current_year)],
+        validators=[MaxValueValidator(get_current_year),],
         help_text='Введите год публикации в формате YYYY (например, 2014)',
         verbose_name="Год публикации"
     )
