@@ -12,7 +12,7 @@ INVALID_CHARS_ERROR = (
 
 def username_validator(username):
     """Валидатор для проверки поля username."""
-    if username in settings.PROFILE_RESERVED_SEGMENT:
+    if username == settings.PROFILE_RESERVED_SEGMENT:
         raise ValidationError(INVALID_USERNAME_ERROR.format(username))
     if (invalid_chars := re.findall(
         settings.USERNAME_INVALID_CHARS_REGEX,
