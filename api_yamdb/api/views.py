@@ -97,7 +97,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get', 'patch'],
             permission_classes=[IsAuthenticated],
-            url_path=settings.ME_URL_PATH)
+            url_path=settings.PROFILE_RESERVED_SEGMENT)
     def user_self_page(self, request):
         """Работа со своей учётной записью."""
         user = request.user
