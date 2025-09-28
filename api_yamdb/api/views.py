@@ -16,8 +16,9 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 
-from api.permissions import (IsAdminOnlyPermission, IsAdminOrReadOnly,
-                             IsAuthorOrModeratorOrAdmin)
+from api.permissions import (
+    IsAdminOnlyPermission, IsAdminOrReadOnly, IsAuthorOrModeratorOrAdmin
+)
 from api.serializers import (
     CategorySerializer, CommentSerializer,
     GenreSerializer, ReviewSerializer,
@@ -39,11 +40,12 @@ def signup(request):
     email = serializer.validated_data['email']
     try:
         user, _ = User.objects.get_or_create(username=username, email=email)
-    except IntegrityError as error:
+    except IntegrityError:
         raise ValidationError(
-            {'username': 'username уже занят.'}
-            if 'reviews_user.username' in error.args
-            else {'email': 'email уже занят.'}
+            {'error': 'username уже занят.'}
+            if User.objects.filter(
+                email=serializer.validated_data['username']).exists()
+            else {'error': 'email уже занят.'}
         )
     user.confirmation_code = ''.join(
         random.choices(settings.CONFIRMATION_CODE_CHARS,
@@ -63,30 +65,28 @@ def signup(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def token(request):
-    """
-    Выдача JWT-токена при предъявлении валидного одноразового кода.
-    Код после успешной выдачи токена «сбрасывается»
-    (становится недействительным).
-    """
+    """Выдача JWT-токена при предъявлении валидного пин-кода."""
     serializer = TokenSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-
     username = serializer.validated_data['username']
     code = serializer.validated_data['confirmation_code']
-
     user = get_object_or_404(User, username=username)
-
     if user.confirmation_code != code or not code:
-        user.confirmation_code = ''
-        user.save(update_fields=['confirmation_code'])
+        if user.confirmation_code:
+            user.confirmation_code = ''
+            user.save(update_fields=['confirmation_code'])
         raise ValidationError(
             {'confirmation_code': 'Неверный код подтверждения.'}
         )
-    token_str = str(AccessToken.for_user(user))
-    return Response({'token': token_str}, status=status.HTTP_200_OK)
+    return Response(
+        {'token': str(AccessToken.for_user(user))},
+        status=status.HTTP_200_OK
+    )
 
 
 class UserViewSet(viewsets.ModelViewSet):
+    """Вьюсет для работы с пользователем."""
+
     queryset = User.objects.all()
     serializer_class = UserSerializer
     filter_backends = (drf_filters.SearchFilter,)
@@ -97,7 +97,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get', 'patch'],
             permission_classes=[IsAuthenticated],
-            url_path=settings.ME_URL_PATH)
+            url_path=settings.PROFILE_RESERVED_SEGMENT)
     def user_self_page(self, request):
         """Работа со своей учётной записью."""
         user = request.user
@@ -124,6 +124,7 @@ class ListCreateDestroySlugViewSet(
     Только список, создание и удаление.
     Для моделей с полем slug.
     """
+
     permission_classes = (IsAdminOrReadOnly,)
     filter_backends = (drf_filters.SearchFilter,)
     search_fields = ('name',)
